@@ -24,6 +24,7 @@ pnpm-debug.log*
 .idea/
 .DS_Store
 Thumbs.db
+.kilo/
 
 # Coverage / test artefacts
 coverage/
