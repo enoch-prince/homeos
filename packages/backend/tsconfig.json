@@ -5,7 +5,7 @@
     "types": ["node"],
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "baseUrl": ".",
+    // "baseUrl": ".",
     "paths": {
       "@homeos/schemas": ["../schemas/src/index.ts"]
     }
