@@ -394,6 +394,92 @@ export async function validatePantryItemCreate(
   return saved;
 }
 
+// Metadata-only patch (SPEC-006): name/location/parLevel/unit/expiryDate.
+// Kept separate from validatePantryItemUpdate (delta math) to preserve the
+// tested +1/−1 path. Quantity is intentionally NOT editable here.
+export type PantryItemPatch = Partial<Pick<PantryItem, 'name' | 'location' | 'parLevel' | 'unit' | 'expiryDate'>>;
+
+export async function validatePantryItemEdit(
+  itemId: string,
+  patch: PantryItemPatch,
+  ctx: ValidatorContext,
+): Promise<PantryItem> {
+  const member = await resolveActiveMember(ctx);
+  assertPermission(member, 'write:pantry');
+
+  const item = await ctx.db.findById<PantryItem>(Collections.PANTRY_ITEMS, itemId);
+  if (!item) {
+    throw new SpecViolationError(
+      'PANTRY_NOT_FOUND',
+      'pantry',
+      `PantryItem not found: ${itemId}`,
+      { itemId },
+    );
+  }
+
+  // Stage 3 — sanity check the editable fields
+  if (patch.name !== undefined && patch.name.trim().length === 0) {
+    throw new SpecViolationError(
+      'PANTRY_NAME_EMPTY',
+      'pantry',
+      'PantryItem name cannot be empty',
+      { itemId },
+    );
+  }
+  if (patch.parLevel !== undefined && patch.parLevel < 0) {
+    throw new SpecViolationError(
+      PantryErrorCodes.NEGATIVE_QUANTITY,
+      'pantry',
+      'parLevel cannot be negative',
+      { itemId, parLevel: patch.parLevel },
+    );
+  }
+
+  // Stage 5 — stamp (resets _rev + syncStatus to pending, like update)
+  const cleaned: Record<string, unknown> = {};
+  for (const k of ['name', 'location', 'parLevel', 'unit', 'expiryDate'] as const) {
+    if (patch[k] !== undefined) cleaned[k] = patch[k];
+  }
+  const dbPatch = stampUpdate(item, cleaned as Partial<PantryItem>, ctx);
+
+  // Stage 6 — write
+  const saved = await ctx.db.update<PantryItem>(Collections.PANTRY_ITEMS, itemId, dbPatch);
+
+  // Stage 4 — par level trigger if edit lowered parLevel below quantity
+  if (saved.quantity <= saved.parLevel) {
+    await _ensureShoppingListItem(saved, ctx);
+  }
+
+  return saved;
+}
+
+export async function validatePantryItemDelete(
+  itemId: string,
+  ctx: ValidatorContext,
+): Promise<void> {
+  const member = await resolveActiveMember(ctx);
+  assertPermission(member, 'delete:pantry');
+
+  const item = await ctx.db.findById<PantryItem>(Collections.PANTRY_ITEMS, itemId);
+  if (!item) {
+    throw new SpecViolationError(
+      'PANTRY_NOT_FOUND',
+      'pantry',
+      `PantryItem not found: ${itemId}`,
+      { itemId },
+    );
+  }
+
+  // Stage 3 — orphan guard.
+  // v1 (in-memory) does NOT cascade. Any ShoppingListItem with
+  // sourcePantryItemId === itemId becomes stale (it still references a
+  // soft-deleted record). This is acceptable for the in-memory round —
+  // references are flagged, not silently nulled (SPEC-000 §3.3).
+
+  // Stage 6 — soft delete
+  await ctx.db.softDelete(Collections.PANTRY_ITEMS, itemId, ctx.memberId);
+}
+
 export async function validateShoppingListItemStatus(
   itemId: string,
   status: ShoppingListItem['status'],
