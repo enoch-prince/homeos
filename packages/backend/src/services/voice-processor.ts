@@ -138,9 +138,19 @@ export function makeGroqClient(apiKey: string): GroqClient {
 // Each rule is a list of RegExp objects paired with defaults.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-// Repo layout: packages/backend/src/services → packages → repo root → specs
-const DEFAULT_PATTERNS_PATH = join(__dirname, '../../../specs/voice-patterns.yaml');
+// Repo layout: packages/backend/src/services → packages → repo root → specs.
+// Computed lazily so importing this module in a browser bundle (which has no
+// `fs`/`path`/`url`) does not throw at module-evaluation time.
+let _defaultPatternsPath: string | null = null;
+function getDefaultPatternsPath(): string {
+  if (_defaultPatternsPath === null) {
+    const base = typeof import.meta.url === 'string'
+      ? dirname(fileURLToPath(import.meta.url))
+      : '.';
+    _defaultPatternsPath = join(base, '../../../specs/voice-patterns.yaml');
+  }
+  return _defaultPatternsPath;
+}
 
 interface CompiledRule {
   id: string;
@@ -162,17 +172,23 @@ function compilePatterns(yamlPath: string): CompiledRule[] {
 
 // Compiled once — module-level singleton
 let _compiledRules: CompiledRule[] | null = null;
-let _patternsPath: string = DEFAULT_PATTERNS_PATH;
+let _patternsPath: string | null = null;
 
 function getCompiledRules(): CompiledRule[] {
   if (!_compiledRules) {
-    _compiledRules = compilePatterns(_patternsPath);
+    // Browser builds cannot read the YAML file — fall back to an empty
+    // rule set so Tier 0 simply matches nothing instead of throwing.
+    try {
+      _compiledRules = compilePatterns(_patternsPath ?? getDefaultPatternsPath());
+    } catch {
+      _compiledRules = [];
+    }
   }
   return _compiledRules;
 }
 
 /** Exposed for tests to inject a custom rules path (or reset to default). */
-export function _resetCompiledRules(patternsPath: string = DEFAULT_PATTERNS_PATH): void {
+export function _resetCompiledRules(patternsPath: string | null = null): void {
   _patternsPath = patternsPath;
   _compiledRules = null;
 }
