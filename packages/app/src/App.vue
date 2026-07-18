@@ -20,8 +20,7 @@ import VoiceFab from '@/components/voice/VoiceFab.vue'
 import { useDbStore } from '@/stores/db.store'
 import { useAppStore } from '@/stores/app.store'
 import { v4 as uuidv4 } from 'uuid'
-// import { Collections } from '@/middleware/validator'
-import { Collections } from '@homeos/backend/'
+import { Collections } from '@homeos/backend/middleware/validator'
 import type { MaintenanceTask } from '@homeos/schemas'
 
 const dbStore  = useDbStore()
