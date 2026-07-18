@@ -8,6 +8,8 @@
 
     <!-- Right: sync indicator + avatar -->
     <div class="header-actions">
+      <slot name="actions" />
+
       <!-- Sync dot (SPEC-002 §7) -->
       <div
         class="sync-dot"
