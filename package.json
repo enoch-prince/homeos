@@ -1,0 +1,12 @@
+{
+  "name": "homeos-workspace",
+  "private": true,
+  "packageManager": "pnpm@11.13.1",
+  "version": "0.1.0",
+  "scripts": {
+    "dev":       "pnpm --filter @homeos/app dev",
+    "build":     "pnpm --filter @homeos/app build",
+    "test":      "pnpm --filter @homeos/backend test",
+    "typecheck": "pnpm -r typecheck"
+  }
+}

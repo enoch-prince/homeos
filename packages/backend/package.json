@@ -1,0 +1,47 @@
+{
+  "name": "@homeos/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@homeos/schemas": "workspace:*",
+    "fast-levenshtein": "^3.0.0",
+    "js-yaml": "^5.2.1",
+    "uuid": "^9.0.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/fast-levenshtein": "^0.0.4",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^26.1.0",
+    "@types/uuid": "^9.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.6.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./middleware/validator": {
+      "types": "./src/middleware/validator.ts",
+      "import": "./src/middleware/validator.ts"
+    },
+    "./services/voice-processor": {
+      "types": "./src/services/voice-processor.ts",
+      "import": "./src/services/voice-processor.ts"
+    },
+    "./testing/mock-db": {
+      "types": "./src/testing/mock-db.ts",
+      "import": "./src/testing/mock-db.ts"
+    },
+    "./testing/fixtures": {
+      "types": "./src/testing/fixtures.ts",
+      "import": "./src/testing/fixtures.ts"
+    }
+  }
+}

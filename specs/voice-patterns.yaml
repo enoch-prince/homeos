@@ -1,0 +1,82 @@
+# voice-patterns.yaml
+# HomeOS Tier 0 Intent Pattern Library
+# Version: 0.1.0
+#
+# Rules:
+#   - Patterns are case-insensitive and whitespace-normalised before matching
+#   - Named capture groups map directly to VoiceIntent payload fields
+#   - 'defaults' fill in when a capture group is absent from the match
+#   - Pattern IDs are stable — do not rename without an ADR entry
+#   - Add new patterns at the bottom; do not reorder existing ones
+
+patterns:
+
+  # ── PANTRY: consume ─────────────────────────────────────────────────────────
+  - id: rule_pantry_consume_v1
+    action: UPDATE_PANTRY
+    defaults:
+      actionType: subtract
+      quantity: "1"
+      unit: pcs
+    patterns:
+      - "(?:i\\s+)?(?:used?|ate|consumed|finished|opened)\\s+(?<quantity>[\\d.]+)\\s*(?<unit>kg|g|lbs?|L|ml|pcs?|pieces?|box(?:es)?|bags?)?\\s+(?:of\\s+)?(?<itemName>[a-z][a-z\\s]{0,30})"
+      - "(?:we\\s+)?ran out of\\s+(?<itemName>[a-z][a-z\\s]{0,30})"
+      - "finished\\s+(?:the\\s+)?(?:last\\s+)?(?<itemName>[a-z][a-z\\s]{0,30})"
+
+  # ── PANTRY: restock ──────────────────────────────────────────────────────────
+  - id: rule_pantry_add_v1
+    action: UPDATE_PANTRY
+    defaults:
+      actionType: add
+      quantity: "1"
+      unit: pcs
+    patterns:
+      - "(?:i\\s+)?(?:bought|purchased|got|picked up|restocked)\\s+(?<quantity>[\\d.]+)\\s*(?<unit>kg|g|lbs?|L|ml|pcs?|pieces?|box(?:es)?|bags?)?\\s+(?:of\\s+)?(?<itemName>[a-z][a-z\\s]{0,30})"
+      - "(?:put|placed|added)\\s+(?<quantity>[\\d.]+)\\s*(?<unit>kg|g|lbs?|L|ml|pcs?)?\\s+(?:of\\s+)?(?<itemName>[a-z][a-z\\s]{0,30})\\s+(?:in(?:to)?\\s+)?(?:the\\s+)?(?<location>fridge|freezer|pantry|garage)"
+
+  # ── SHOPPING: add to list ────────────────────────────────────────────────────
+  - id: rule_shopping_add_v1
+    action: ADD_TO_SHOPPING
+    defaults:
+      quantity: 1
+      unit: pcs
+    patterns:
+      - "add\\s+(?<itemName>[a-z][a-z\\s]{0,30})\\s+to\\s+(?:the\\s+)?(?:shopping\\s+)?list"
+      - "(?:we\\s+)?need\\s+(?:more\\s+)?(?<itemName>[a-z][a-z\\s]{0,30})"
+      - "(?:get|buy|pick up)\\s+(?<itemName>[a-z][a-z\\s]{0,30})\\s+(?:from\\s+)?(?:the\\s+store)?"
+      - "(?:don't\\s+)?forget\\s+(?:to\\s+buy\\s+|the\\s+)?(?<itemName>[a-z][a-z\\s]{0,30})"
+
+  # ── FINANCE: log expense ─────────────────────────────────────────────────────
+  - id: rule_expense_log_v1
+    action: LOG_EXPENSE
+    patterns:
+      - "(?:i\\s+)?(?:spent|paid)\\s+(?<amount>\\$?[\\d.]+)\\s+(?:on|for)\\s+(?<note>[a-z][a-z\\s,]{0,50})"
+      - "(?:log|record|add)\\s+(?:an?\\s+)?expense(?:\\s+of)?\\s+(?<amount>\\$?[\\d.]+)(?:\\s+for\\s+(?<note>[a-z][a-z\\s,]{0,50}))?"
+      - "(?<note>[a-z][a-z\\s]{0,30})\\s+cost\\s+(?:me\\s+)?(?<amount>\\$?[\\d.]+)"
+      - "(?:receipt|bill)\\s+(?:for\\s+)?(?<amount>\\$?[\\d.]+)(?:\\s+for\\s+(?<note>[a-z][a-z\\s,]{0,50}))?"
+
+  # ── MAINTENANCE: log completion ──────────────────────────────────────────────
+  - id: rule_maintenance_done_v1
+    action: LOG_MAINTENANCE
+    defaults:
+      completed: true
+    patterns:
+      - "(?:i\\s+)?(?:changed|replaced|fixed|serviced|cleaned|repaired|installed)\\s+(?:the\\s+)?(?<assetName>[a-z][a-z\\s]{0,30})(?:\\s+(?<taskTitle>[a-z][a-z\\s]{0,50}))?"
+      - "(?:maintenance|service)\\s+(?:done|complete|finished)\\s+(?:on\\s+)?(?:the\\s+)?(?<assetName>[a-z][a-z\\s]{0,30})"
+      - "(?<assetName>[a-z][a-z\\s]{0,20})\\s+(?<taskTitle>[a-z][a-z\\s]{0,30})\\s+(?:is\\s+)?done"
+
+  # ── CHORES: mark complete ────────────────────────────────────────────────────
+  - id: rule_chore_done_v1
+    action: COMPLETE_CHORE
+    patterns:
+      - "(?:i\\s+)?(?:did|finished|completed|done)\\s+(?:the\\s+)?(?<choreTitle>[a-z][a-z\\s]{0,50})"
+      - "(?<choreTitle>[a-z][a-z\\s]{0,50})\\s+(?:is\\s+)?(?:done|finished|complete)"
+      - "(?:just\\s+)?(?:vacuumed|mopped|swept|cleaned|washed|dusted)\\s+(?:the\\s+)?(?<choreTitle>[a-z][a-z\\s]{0,40})"
+
+  # ── CALENDAR: add event ──────────────────────────────────────────────────────
+  - id: rule_calendar_add_v1
+    action: ADD_CALENDAR
+    patterns:
+      - "(?:add|schedule|book|put)\\s+(?<title>[a-z][a-z\\s]{0,60})\\s+(?:on|for)\\s+(?<startAt>[a-z0-9\\s,]+)"
+      - "(?:i\\s+)?have\\s+(?<title>[a-z][a-z\\s]{0,60})\\s+(?:on|at)\\s+(?<startAt>[a-z0-9\\s,]+)"
+      - "remind\\s+(?:me\\s+)?(?:about\\s+)?(?<title>[a-z][a-z\\s]{0,60})\\s+(?:on|at)\\s+(?<startAt>[a-z0-9\\s,]+)"
