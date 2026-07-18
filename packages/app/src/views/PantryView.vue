@@ -1,6 +1,18 @@
 <template>
   <div class="pantry-view">
     <ModuleHeader title="Pantry" :subtitle="viewLabel" @avatar-tap="() => {}">
+      <template #actions>
+        <button
+          class="add-btn"
+          :aria-label="`Add item to ${activeView === 'pantry' ? 'pantry' : 'shopping list'}`"
+          @click="openCreate"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
+      </template>
     </ModuleHeader>
 
     <!-- View toggle -->
@@ -31,8 +43,9 @@
               :status="itemStatus(item)"
               :low-stock="item.quantity <= item.parLevel"
               left-action-label="Remove"
-              @tap="selectedItem = item"
+              @tap="openEdit(item)"
               @swipe-left="subtractOne(item)"
+              @swipe-right="openEdit(item)"
             >
               <!-- Inline quantity control -->
               <template #quantity>
@@ -71,7 +84,26 @@
       </template>
     </main>
 
-    <!-- TODO: Detail bottom sheet for selectedItem (Reka UI Dialog as sheet) -->
+    <!-- Detail bottom sheet (create / edit / delete) -->
+    <PantryDetailSheet
+      v-model:open="sheetOpen"
+      :item="selectedItem"
+      @saved="onSheetSaved"
+      @deleted="onSheetDeleted"
+    />
+
+    <!-- Floating add button -->
+    <button
+      v-if="activeView === 'pantry'"
+      class="fab"
+      aria-label="Add item"
+      @click="openCreate"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+    </button>
   </div>
 </template>
 
@@ -79,6 +111,7 @@
 import { ref, computed, onMounted } from 'vue'
 import ModuleHeader from '@/components/layout/ModuleHeader.vue'
 import EntityCard from '@/components/ui/EntityCard.vue'
+import PantryDetailSheet from '@/components/pantry/PantryDetailSheet.vue'
 import { useDbStore } from '@/stores/db.store'
 import { useAppStore } from '@/stores/app.store'
 import { Collections, validatePantryItemUpdate, validateShoppingListItemStatus } from '@homeos/backend/middleware/validator'
@@ -99,6 +132,7 @@ const pantryItems   = ref<PantryItem[]>([])
 const shoppingItems = ref<ShoppingListItem[]>([])
 const selectedItem  = ref<PantryItem | null>(null)
 const selectedShoppingItem = ref<ShoppingListItem | null>(null)
+const sheetOpen     = ref(false)
 
 const locations = ['Fridge', 'Freezer', 'Pantry', 'Garage', 'Other'] as const
 
@@ -171,6 +205,26 @@ async function markPurchased(item: ShoppingListItem) {
     db: dbStore.adapter,
     notifications: dbStore.notifications,
   })
+  await refresh()
+}
+
+function openCreate() {
+  if (activeView.value !== 'pantry') return
+  selectedItem.value = null
+  sheetOpen.value = true
+}
+
+function openEdit(item: PantryItem) {
+  selectedItem.value = item
+  sheetOpen.value = true
+}
+
+async function onSheetSaved() {
+  await refresh()
+}
+
+async function onSheetDeleted() {
+  selectedItem.value = null
   await refresh()
 }
 
@@ -263,6 +317,47 @@ onMounted(refresh)
   font-weight: 600;
   color: var(--text-primary);
 }
+
+/* ── Header add button ───────────────────────────────────────────────────── */
+.add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  background: var(--surface-elevated);
+  color: var(--color-primary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--duration-fast);
+}
+.add-btn svg { width: 20px; height: 20px; }
+.add-btn:active { background: var(--border-default); }
+
+/* ── Floating add button (FAB) ─────────────────────────────────────────── */
+.fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + 16px);
+  z-index: 20;
+  width: var(--fab-size);
+  height: var(--fab-size);
+  border-radius: 50%;
+  border: none;
+  background: var(--color-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--duration-fast);
+}
+.fab svg { width: 24px; height: 24px; }
+.fab:active { transform: scale(0.94); }
 
 /* ── Empty state ────────────────────────────────────────────────────────────── */
 .empty-state {
